@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FeedBridge — NGO Dashboard</title>
+  <style>
+    :root {
+      font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif;
+      color: #14231d; background: #f4f8f6;
+      --accent: #1f8a54; --accent-soft: #e6f4ec;
+      --high: #1f8a54; --medium: #b8860b; --low: #8a94a0;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    main { max-width: 1180px; margin: 0 auto; padding: 26px 18px 48px; }
+    h1, h2, h3, p { margin-top: 0; }
+    .top { display: flex; justify-content: space-between; gap: 20px; align-items: center; margin-bottom: 22px; flex-wrap: wrap; }
+    .top h1 { font-size: 22px; }
+    .sub { color: #5c6b63; margin-bottom: 0; font-size: 14px; }
+    .picker { display: flex; gap: 10px; align-items: center; background: #fff; border: 1px solid #dbe6df; border-radius: 12px; padding: 8px 8px 8px 14px; box-shadow: 0 4px 14px rgba(20,35,29,0.05); }
+    .picker label { font-size: 12px; font-weight: 700; color: #5c6b63; white-space: nowrap; }
+    select { border: 1px solid #cddad2; border-radius: 8px; padding: 9px 10px; font: inherit; background: #fff; min-width: 220px; }
+
+    .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 22px; }
+    .stat { background: #fff; border: 1px solid #e2ece5; border-radius: 14px; padding: 16px; box-shadow: 0 4px 14px rgba(20,35,29,0.04); }
+    .stat small { display: block; color: #6d7d74; font-size: 12px; margin-bottom: 6px; font-weight: 600; }
+    .stat strong { font-size: 24px; }
+    .stat.accent { background: var(--accent-soft); border-color: #c9e6d5; }
+
+    section.card { background: #fff; border: 1px solid #e2ece5; border-radius: 16px; padding: 20px; box-shadow: 0 6px 20px rgba(20,35,29,0.05); margin-bottom: 18px; }
+    .card-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; gap: 10px; flex-wrap: wrap; }
+    .card-head h2 { font-size: 16px; }
+    .muted { color: #6d7d74; font-size: 13px; }
+
+    .restaurant-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+    .r-card { border: 1px solid #e5ede8; border-radius: 12px; padding: 14px; transition: box-shadow .15s, transform .15s; cursor: default; }
+    .r-card:hover { box-shadow: 0 6px 16px rgba(20,35,29,0.09); transform: translateY(-1px); }
+    .r-head { display: flex; justify-content: space-between; align-items: start; gap: 8px; margin-bottom: 8px; }
+    .r-name { font-weight: 800; font-size: 14.5px; line-height: 1.25; }
+    .r-dist { font-size: 12px; color: #6d7d74; white-space: nowrap; }
+    .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 800; padding: 4px 9px; border-radius: 999px; }
+    .badge .dot { width: 7px; height: 7px; border-radius: 50%; }
+    .badge.high { background: #e6f4ec; color: var(--high); } .badge.high .dot { background: var(--high); }
+    .badge.medium { background: #fbf1dc; color: var(--medium); } .badge.medium .dot { background: var(--medium); }
+    .badge.low, .badge.na { background: #eef1f0; color: var(--low); } .badge.low .dot, .badge.na .dot { background: var(--low); }
+    .r-meta { font-size: 12.5px; color: #48534d; margin-top: 8px; display: grid; gap: 4px; }
+    .r-meta span b { color: #14231d; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; color: #6d7d74; font-size: 11.5px; text-transform: uppercase; letter-spacing: .03em; padding: 8px 10px; border-bottom: 1px solid #e5ede8; }
+    td { padding: 10px 10px; border-bottom: 1px solid #eef2f0; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    .status-tag { font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 999px; background: #eef1f0; color: #48534d; white-space: nowrap; }
+    .status-tag.picked_up { background: #e6f4ec; color: var(--high); }
+    .status-tag.awaiting_ngo_response { background: #eaf1fb; color: #2f6fb0; }
+    .status-tag.unclaimed, .status-tag.cancelled { background: #fdecec; color: #b03434; }
+
+    canvas { max-width: 260px; }
+    .chart-row { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; }
+    .legend { display: grid; gap: 6px; font-size: 13px; }
+    .legend span { display: inline-flex; align-items: center; gap: 7px; }
+    .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+    .empty { color: #6d7d74; text-align: center; padding: 30px 10px; font-size: 14px; }
+    .loading { color: #6d7d74; text-align: center; padding: 40px 10px; }
+
+    @media (max-width: 860px) { .summary { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 520px) { .summary { grid-template-columns: 1fr; } .picker { width: 100%; } select { flex: 1; } }
+
+    .request-btn {
+    width: 100%;
+    margin-top: 12px;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+    .request-btn:hover {
+        opacity: 0.85;
+}
+  </style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div>
+      <h1>NGO Dashboard</h1>
+      <p class="sub">Nearby restaurants, your donation history, and area wastage trends.</p>
+    </div>
+    <div class="picker">
+      <label for="ngo-select">Viewing as</label>
+      <select id="ngo-select"><option value="">Loading NGOs…</option></select>
+    </div>
+  </div>
+
+  <div id="app">
+    <div class="loading">Select an NGO above to load its dashboard.</div>
+  </div>
+</main>
+
+<script>
+  const API_BASE = window.location.pathname.replace(/\/ngo-dashboard\/?$/, '');
+  const dataUrl = `${API_BASE}/ngo-dashboard-data`;
+
+  const select = document.getElementById('ngo-select');
+  const app = document.getElementById('app');
+
+  function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  function badgeClass(label) {
+    if (label === 'High') return 'high';
+    if (label === 'Medium') return 'medium';
+    if (label === 'Low') return 'low';
+    return 'na';
+  }
+
+  function formatQty(byUnit) {
+    const entries = Object.entries(byUnit || {});
+    if (!entries.length) return '—';
+    return entries.map(([unit, qty]) => `${Math.round(qty * 10) / 10} ${unit}`).join(', ');
+  }
+
+  function statusLabel(status) {
+    const map = {
+      awaiting_ngo_response: 'Awaiting response',
+      picked_up: 'Picked up',
+      unclaimed: 'Unclaimed',
+      cancelled: 'Cancelled',
+      created: 'Created',
+    };
+    return map[status] || status || 'Unknown';
+  }
+
+  function drawRescueDonut(canvas, pickedUp, unclaimed) {
+    const ctx = canvas.getContext('2d');
+    const total = pickedUp + unclaimed;
+    const w = canvas.width, h = canvas.height, r = Math.min(w, h) / 2 - 6;
+    ctx.clearRect(0, 0, w, h);
+    if (total === 0) {
+      ctx.fillStyle = '#8a94a0';
+      ctx.font = '13px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('No data yet', w / 2, h / 2);
+      return;
+    }
+    const cx = w / 2, cy = h / 2;
+    const slices = [
+      { value: pickedUp, color: '#1f8a54' },
+      { value: unclaimed, color: '#d97a7a' },
+    ];
+    let start = -Math.PI / 2;
+    slices.forEach(s => {
+      const angle = (s.value / total) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, start, start + angle);
+      ctx.closePath();
+      ctx.fillStyle = s.color;
+      ctx.fill();
+      start += angle;
+    });
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.58, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    ctx.fillStyle = '#14231d';
+    ctx.font = 'bold 18px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${Math.round(100 * pickedUp / total)}%`, cx, cy - 4);
+    ctx.font = '11px Inter, sans-serif';
+    ctx.fillStyle = '#6d7d74';
+    ctx.fillText('rescued', cx, cy + 14);
+  }
+
+  function render(data) {
+    const trend = data.wastage_trend || {};
+    const restaurants = data.nearby_restaurants || [];
+    const records = data.donation_records || [];
+
+    app.innerHTML = `
+      <div class="summary">
+        <div class="stat accent"><small>Restaurants in range</small><strong>${trend.restaurants_in_range ?? '—'}</strong></div>
+        <div class="stat"><small>Total donations (area)</small><strong>${trend.total_donations ?? '—'}</strong></div>
+        <div class="stat"><small>Picked up</small><strong>${trend.total_picked_up ?? '—'}</strong></div>
+        <div class="stat"><small>Unclaimed</small><strong>${trend.total_unclaimed ?? '—'}</strong></div>
+      </div>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Nearby restaurants</h2>
+          <span class="muted">Within the 15 km matching radius, sorted by distance</span>
+        </div>
+        <div class="restaurant-grid" id="restaurant-grid"></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Area rescue rate</h2>
+          <span class="muted">Picked up vs. unclaimed across nearby restaurants</span>
+        </div>
+        <div class="chart-row">
+          <canvas id="rescue-chart" width="200" height="200"></canvas>
+          <div class="legend">
+            <span><i style="background:#1f8a54"></i> Picked up (${trend.total_picked_up ?? 0})</span>
+            <span><i style="background:#d97a7a"></i> Unclaimed (${trend.total_unclaimed ?? 0})</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Your donation records</h2>
+          <span class="muted">Most recent offers this NGO received</span>
+        </div>
+        <div id="records-wrap"></div>
+      </section>
+    `;
+
+    const grid = document.getElementById('restaurant-grid');
+    if (!restaurants.length) {
+      grid.innerHTML = '<div class="empty">No restaurant activity in range yet.</div>';
+    } else {
+      grid.innerHTML = restaurants.map(r => {
+        const s = r.surplus_likelihood || {};
+        return `
+          <div class="r-card">
+            <div class="r-head">
+              <div class="r-name">${esc(r.name)}</div>
+              <div class="r-dist">${r.distance_km} km</div>
+            </div>
+            <span class="badge ${badgeClass(s.label)}"><span class="dot"></span>Surplus likelihood: ${esc(s.label)}</span>
+            <button class="request-btn"
+                    onclick='requestSurplusFood(${JSON.stringify(r)})'>
+                Request Surplus Food
+            </button>
+            <div class="r-meta">
+              <span>Donations logged: <b>${r.donation_count}</b></span>
+              <span>Total quantity: <b>${formatQty(r.total_quantity_by_unit)}</b></span>
+              <span>Most common category: <b>${esc(r.top_category || '—')}</b></span>
+              <span>Picked up / Unclaimed: <b>${r.picked_up_count} / ${r.unclaimed_count}</b></span>
+            
+            </div>
+            
+          </div>`;
+      }).join('');
+    }
+
+    drawRescueDonut(document.getElementById('rescue-chart'), trend.total_picked_up || 0, trend.total_unclaimed || 0);
+
+    const recordsWrap = document.getElementById('records-wrap');
+    if (!records.length) {
+      recordsWrap.innerHTML = '<div class="empty">No donation offers recorded for this NGO yet.</div>';
+    } else {
+      recordsWrap.innerHTML = `
+        <table>
+          <thead><tr><th>Restaurant</th><th>Items</th><th>Distance</th><th>Status</th></tr></thead>
+          <tbody>
+            ${records.map(r => `
+              <tr>
+                <td>${esc(r.restaurant_name || '—')}</td>
+                <td>${esc(r.items_summary || '—')}</td>
+                <td>${r.distance_km != null ? r.distance_km + ' km' : '—'}</td>
+                <td><span class="status-tag ${esc(r.status)}">${esc(statusLabel(r.status))}</span></td>
+              </tr>`).join('')}
+          </tbody>
+        </table>`;
+    }
+  }
+
+  async function loadNgoData(ngoId) {
+    app.innerHTML = '<div class="loading">Loading dashboard…</div>';
+    try {
+      const res = await fetch(`${dataUrl}?ngo_id=${encodeURIComponent(ngoId)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to load dashboard');
+      render(data);
+    } catch (err) {
+      app.innerHTML = `<div class="empty">Could not load this NGO's dashboard (${esc(err.message)}).</div>`;
+    }
+  }
+
+  async function loadNgoList() {
+    try {
+      const res = await fetch(dataUrl);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to load NGOs');
+      const ngos = data.ngos || [];
+      if (!ngos.length) {
+        select.innerHTML = '<option value="">No active NGOs found</option>';
+        return;
+      }
+      select.innerHTML = '<option value="">Select an NGO…</option>' +
+        ngos.map(n => `<option value="${esc(n.ngo_id)}">${esc(n.name)}</option>`).join('');
+    } catch (err) {
+      select.innerHTML = '<option value="">Could not load NGO list</option>';
+    }
+  }
+
+  select.addEventListener('change', () => {
+    if (select.value) loadNgoData(select.value);
+    else app.innerHTML = '<div class="loading">Select an NGO above to load its dashboard.</div>';
+  });
+
+  loadNgoList();
+  function requestSurplusFood(restaurant) {
+    const phone = restaurant.phone || restaurant.restaurant_phone || "918754109503";
+
+    if (!phone) {
+        alert("Restaurant contact number is not available.");
+        return;
+    }
+
+    const cleanPhone = String(phone).replace(/\D/g, "");
+
+    const restaurantName =
+        restaurant.restaurant_name ||
+        restaurant.name ||
+        "Restaurant";
+
+    const message =
+        `Hello ${restaurantName}, this is a request from FeedBridge. ` +
+        `Our NGO is currently looking for surplus food. ` +
+        `Do you have any surplus food available for donation today?`;
+
+    window.open(
+        `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`,
+        "_blank"
+    );
+}
+</script>
+</body>
+</html>
